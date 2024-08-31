@@ -3,28 +3,32 @@ import Empty from "@/components/empty";
 import { Story } from "@/utils/story";
 import { useContext, useEffect, useState } from "react";
 import getStoryboards from "@/helpers/getStoryboards";
+import Action from "./action";
+import { sort } from "@/utils/sort";
 
 export default function StoryBoard() {
   const { state, dispatch } = useContext(Story);
 
   const [entities, setEntities] = useState([]);
+  const [statAndActions, setStatAndActions] = useState([]);
 
   useEffect(() => {
     const storyboards = async () => {
       let res = await getStoryboards();
+      let data = { ...res.data.story };
+      console.log(data);
       dispatch({
         type: "ADD_PLACETIME",
-        payload: { ...res.data.story.placetimes[0] },
+        payload: data.placetimes[0],
       });
-      console.log(res.data.story.placetimes[0]);
     };
 
     storyboards();
   }, []);
 
   useEffect(() => {
-    console.log(state);
     let entitiesProps = [];
+    let all = [];
 
     state.placetimes.entities.forEach((entity) => {
       entity.statements = [];
@@ -33,6 +37,9 @@ export default function StoryBoard() {
     });
 
     state.placetimes.statements.forEach((statement) => {
+      statement.action = false;
+      all.push(statement);
+
       entitiesProps.forEach((entity) => {
         if (entity.gid == statement.by) {
           entity.statements.push(statement);
@@ -41,6 +48,9 @@ export default function StoryBoard() {
     });
 
     state.placetimes.actions.forEach((action) => {
+      action.action = true;
+      all.push(action);
+
       entitiesProps.forEach((entity) => {
         if (entity.gid == action.by) {
           entity.actions.push(action);
@@ -49,10 +59,12 @@ export default function StoryBoard() {
     });
 
     setEntities([...entitiesProps]);
+    sort(all);
+    setStatAndActions([...all]);
   }, [state]);
 
   return (
-    <div className="flex-col p-6 justify-center w-[85vw] h-[96vh] bg-slate-950 rounded-lg text-slate-500 text-lg">
+    <div className="flex-col p-6 justify-center w-[85vw] h-fit bg-slate-950 rounded-lg text-slate-500 text-lg">
       <>
         {entities.map((entity) => (
           <>
@@ -60,16 +72,18 @@ export default function StoryBoard() {
               <span>{entity.name}</span>
               <div className="w-full h-[0.5rem] bg-slate-800 rounded"></div>
               <div className="flex gap-6">
-                {entity.statements.map((statement) => (
-                  <>
-                    <Statement />
-                  </>
-                ))}
-                {entity.actions.map((action) => (
-                  <>
-                    <Statement />
-                  </>
-                ))}
+                {console.log(statAndActions)}
+                {statAndActions.map((obj) =>
+                  obj.by.gid == entity.gid ? (
+                    obj.action ? (
+                      <Action description={obj.description} />
+                    ) : (
+                      <Statement description={obj.description} />
+                    )
+                  ) : (
+                    <Empty />
+                  )
+                )}
               </div>
             </div>
           </>
